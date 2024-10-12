@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -12,14 +11,6 @@ import { SendImage } from "./views/SendImage";
 import { CameraIcon } from "@radix-ui/react-icons";
 
 export function SigninScreeen() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
       <Card className="bg-gray-200 p-4">
