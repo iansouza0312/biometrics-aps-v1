@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -11,10 +12,39 @@ import {
 
 export function SendImage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedFile) return;
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    setIsUploading(true);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/file_upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data", // Ensure the correct content type for file upload
+          },
+        }
+      );
+      console.log("File uploaded successfully", response.data);
+      alert("Upload realizado com sucesso!");
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Erro ao fazer upload");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -39,7 +69,9 @@ export function SendImage() {
             Arquivo selecionado: <strong>{selectedFile.name}</strong>
           </p>
         )}
-        <Button>enviar imagem</Button>
+        <Button onClick={handleSubmit} disabled={isUploading}>
+          {isUploading ? "Enviando..." : "Enviar Imagem"}
+        </Button>
       </DialogContent>
     </Dialog>
   );
