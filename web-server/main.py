@@ -7,21 +7,24 @@ app = Flask(__name__)
 # Inicializa o banco de dados
 init_db()
 
+@app.route('/testing', methods=['GET'])
+def check_server():
+    return jsonify({"message": "Server is working!"})
 
-# Rota para processar a imagem recebida
 @app.route('/upload', methods=['POST'])
 def upload_image():
+    # Check for 'image' instead of 'file'
     if 'image' not in request.files:
         return jsonify({"error": "Nenhuma imagem enviada"}), 400
 
-    file = request.files['image']
+    file = request.files['image']  # Change 'file' to 'image'
     if file.filename == '':
         return jsonify({"error": "Arquivo inválido"}), 400
 
     img_encoding = process_image(file)
 
     if img_encoding is not None:
-        # Salva a codificação no banco
+        # Save face encoding to the database
         save_face_encoding(file.filename, img_encoding)
         return jsonify({"message": "Imagem processada e codificação salva!"})
     else:

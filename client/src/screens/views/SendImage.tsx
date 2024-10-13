@@ -24,25 +24,17 @@ export function SendImage() {
     if (!selectedFile) return;
 
     const formData = new FormData();
-    formData.append("file", selectedFile);
-
+    formData.append("image", selectedFile);
     setIsUploading(true);
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/file_upload",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data", // Ensure the correct content type for file upload
-          },
-        }
-      );
+      const response = await axios.post("http://localhost:5000/", formData);
       console.log("File uploaded successfully", response.data);
       alert("Upload realizado com sucesso!");
     } catch (error) {
       console.error("Error uploading file:", error);
       alert("Erro ao fazer upload");
+      // alert("Upload realizado com sucesso!");
     } finally {
       setIsUploading(false);
     }
@@ -58,20 +50,26 @@ export function SendImage() {
             Escolha sua foto e o sistema ira liberar seu acesso.
           </DialogDescription>
         </DialogHeader>
-        <input
-          id="fileInput"
-          type="file"
-          accept="image/jpeg, image/png"
-          onChange={handleFileChange}
-        />
-        {selectedFile && (
-          <p className="mt-4 text-sm text-gray-700">
-            Arquivo selecionado: <strong>{selectedFile.name}</strong>
-          </p>
-        )}
-        <Button onClick={handleSubmit} disabled={isUploading}>
-          {isUploading ? "Enviando..." : "Enviar Imagem"}
-        </Button>
+        <form
+          // action="http://localhost:5000/"
+          method="post"
+          encType="multipart/form-data"
+        >
+          <input
+            id="fileInput"
+            type="file"
+            // accept="image/jpeg, image/png"
+            onChange={handleFileChange}
+          />
+          {selectedFile && (
+            <p className="mt-4 text-sm text-gray-700">
+              Arquivo selecionado: <strong>{selectedFile.name}</strong>
+            </p>
+          )}
+          <Button onClick={handleSubmit} disabled={isUploading}>
+            {isUploading ? "Enviando..." : "Enviar Imagem"}
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   );
