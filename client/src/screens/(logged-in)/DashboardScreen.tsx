@@ -5,6 +5,11 @@ import {
   Rectangle,
   XAxis,
   YAxis,
+  Label,
+  PolarGrid,
+  PolarRadiusAxis,
+  RadialBar,
+  RadialBarChart,
 } from "recharts";
 import {
   Card,
@@ -25,35 +30,53 @@ export const description =
   "quatidade de propriedades registradas nas 5 principais capitais do pais";
 
 const chartData = [
-  { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
-  { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
-  { browser: "firefox", visitors: 187, fill: "var(--color-firefox)" },
-  { browser: "edge", visitors: 173, fill: "var(--color-edge)" },
-  { browser: "other", visitors: 90, fill: "var(--color-other)" },
+  { estado: "sao_paulo", quantidade: 275, fill: "var(--color-sao_paulo)" },
+  {
+    estado: "rio_de_janeiro",
+    quantidade: 200,
+    fill: "var(--color-rio_de_janeiro)",
+  },
+  { estado: "brasilia", quantidade: 187, fill: "var(--color-brasilia)" },
+  { estado: "fortaleza", quantidade: 173, fill: "var(--color-fortaleza)" },
+  { estado: "salvador", quantidade: 90, fill: "var(--color-salvador)" },
 ];
 const chartConfig = {
-  visitors: {
-    label: "Visitors",
+  quantidade: {
+    label: "quantidade",
   },
-  chrome: {
-    label: "Chrome",
+  sao_paulo: {
+    label: "Sao Paulo",
     color: "hsl(var(--chart-1))",
   },
-  safari: {
-    label: "Safari",
+  rio_de_janeiro: {
+    label: "Rio de Janeiro",
     color: "hsl(var(--chart-2))",
   },
-  firefox: {
-    label: "Firefox",
+  brasilia: {
+    label: "Brasilia",
     color: "hsl(var(--chart-3))",
   },
-  edge: {
-    label: "Edge",
+  fortaleza: {
+    label: "Fortaleza",
     color: "hsl(var(--chart-4))",
   },
-  other: {
-    label: "Other",
+  salvador: {
+    label: "Salvador",
     color: "hsl(var(--chart-5))",
+  },
+} satisfies ChartConfig;
+
+const secondaryData = [
+  { browser: "total", quantidade: 1260, fill: "var(--color-total)" },
+];
+
+const secChartConfig = {
+  quantidade: {
+    label: "propriedades",
+  },
+  total: {
+    label: "Total",
+    color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig;
 
@@ -81,7 +104,7 @@ export function DashboardScreen() {
               <BarChart accessibilityLayer data={chartData}>
                 <CartesianGrid vertical={false} />
                 <XAxis
-                  dataKey="browser"
+                  dataKey="estado"
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
@@ -94,7 +117,7 @@ export function DashboardScreen() {
                   content={<ChartTooltipContent hideLabel />}
                 />
                 <Bar
-                  dataKey="visitors"
+                  dataKey="quantidade"
                   strokeWidth={2}
                   radius={8}
                   activeIndex={2}
@@ -119,12 +142,10 @@ export function DashboardScreen() {
             </div>
           </CardFooter>
         </Card>
-
         <Card>
-          <CardHeader>
-            <CardTitle>Bar Chart - Mixed</CardTitle>
-            <CardDescription>January - June 2024</CardDescription>
-          </CardHeader>
+          {/* <CardHeader>
+            <CardTitle>tipos de pesticida registrados</CardTitle>
+          </CardHeader> */}
           <CardContent>
             <ChartContainer config={chartConfig}>
               <BarChart
@@ -136,7 +157,7 @@ export function DashboardScreen() {
                 }}
               >
                 <YAxis
-                  dataKey="browser"
+                  dataKey="estado"
                   type="category"
                   tickLine={false}
                   tickMargin={10}
@@ -145,22 +166,85 @@ export function DashboardScreen() {
                     chartConfig[value as keyof typeof chartConfig]?.label
                   }
                 />
-                <XAxis dataKey="visitors" type="number" hide />
+                <XAxis dataKey="quantidade" type="number" hide />
                 <ChartTooltip
                   cursor={false}
                   content={<ChartTooltipContent hideLabel />}
                 />
-                <Bar dataKey="visitors" layout="vertical" radius={5} />
+                <Bar dataKey="quantidade" layout="vertical" radius={5} />
               </BarChart>
             </ChartContainer>
           </CardContent>
           <CardFooter className="flex-col items-start gap-2 text-sm">
             <div className="leading-none text-muted-foreground">
-              Showing total visitors for the last 6 months
+              view de teste - visualização horizontal
             </div>
           </CardFooter>
         </Card>
       </div>
+      <Card className="flex flex-col">
+        <CardHeader className="items-center pb-0">
+          <CardTitle>Quantidade total de propriedades registradas</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 pb-0">
+          <ChartContainer
+            config={secChartConfig}
+            className="mx-auto aspect-square max-h-[250px]"
+          >
+            <RadialBarChart
+              data={secondaryData}
+              endAngle={100}
+              innerRadius={80}
+              outerRadius={140}
+            >
+              <PolarGrid
+                gridType="circle"
+                radialLines={false}
+                stroke="none"
+                className="first:fill-muted last:fill-background"
+                polarRadius={[86, 74]}
+              />
+              <RadialBar dataKey="quantidade" background />
+              <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                <Label
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      return (
+                        <text
+                          x={viewBox.cx}
+                          y={viewBox.cy}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                        >
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="fill-foreground text-4xl font-bold"
+                          >
+                            {chartData[0].quantidade.toLocaleString()}
+                          </tspan>
+                          <tspan
+                            x={viewBox.cx}
+                            y={(viewBox.cy || 0) + 24}
+                            className="fill-muted-foreground"
+                          >
+                            propriedades
+                          </tspan>
+                        </text>
+                      );
+                    }
+                  }}
+                />
+              </PolarRadiusAxis>
+            </RadialBarChart>
+          </ChartContainer>
+        </CardContent>
+        <CardFooter className="flex-col gap-2 text-sm">
+          <div className="leading-none text-muted-foreground">
+            exibindo quantidade total de propriedades registradas
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
