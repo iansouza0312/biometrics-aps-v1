@@ -14,7 +14,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
 
-def allowed_file(filename):
+def allowed_file(file_name):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
@@ -24,12 +24,12 @@ def upload_image():
         flash('No file part')
         return redirect(request.url)
     file = request.files['file']
-    if file.filename == '':
+    if file.file_name == '':
         flash('No image selected for uploading')
         return redirect(request.url)
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    if file and allowed_file(file.file_name):
+        file_name = secure_filename(file.file_name)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file_name))
         # print('upload_image filename: ' + filename)
         flash('Image successfully uploaded')
         # return render_template('index.html', filename=filename)
@@ -37,6 +37,182 @@ def upload_image():
     else:
         flash('Allowed image types are - png, jpg, jpeg, gif')
         return redirect(request.url)
+
+## -------------------------------------------------------------------##
+## --------------------------- SESSAO SQL --------------------------- ##
+## -------------------------------------------------------------------##
+# LIBRARY
+import mysql.connector
+
+# CONNECTION
+mydb = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="1999",
+    database="minis_meio_ambiente"
+)
+
+mycursor = mydb.cursor()
+
+# CREATE THE DATABASE
+# mycursor.execute("CREATE DATABASE minis_meio_ambiente")
+
+# DROP THE TABLE IF NECESSARY
+# mycursor.execute("DROP TABLE IF EXISTS data_table")
+
+# CREATE THE TABLES
+create_table_query = """
+    CREATE TABLE IF NOT EXISTS data_table (
+    id INT PRIMARY KEY, 
+    name VARCHAR(45) NOT NULL, 
+    description VARCHAR(255),
+    access_level INT
+    );"""
+mycursor.execute(create_table_query)
+
+# INSERT INFO
+insert_data_query = """
+    INSERT IGNORE INTO data_table (id, name, description, access_level) VALUES
+    (%s, %s, %s, %s)
+    """
+dataTables = [(1, 'Basic data level 1','Todos tem acesso', 1),
+              (2, 'Moderate data level 2','Apenas o ministro do meio ambiente e diretores tem acesso', 2),
+              (3, 'Sensitive data level 3','Apenas o ministro do meio ambiente tem acesso', 3)]
+
+mycursor.executemany(insert_data_query, dataTables)
+
+mydb.commit()
+
+
+## -------------------------------------------------------------------##
+## ----------------------- BIOMETRIC ANALYSIS ----------------------- ##
+## -------------------------------------------------------------------##
+# LIBRARY
+import cv2
+import face_recognition
+import os
+
+# CHECKS IF IMAGE EXISTS AND ENCODES IT
+def encode(imgToCheck):
+    if imgToCheck is None:
+        print("Erro: Imagem não encontrada.")
+    else:
+        # Verifica o tipo de imagem e suas propriedades
+        print(f"Tipo da imagem: {type(imgToCheck)}")
+        print(f"Dimensões da imagem: {imgToCheck.shape}")  # Isso vai imprimir as dimensões e canais da imagem
+        print(f"Tipo de dado da imagem: {imgToCheck.dtype}")  # Isso vai mostrar o tipo de dado, deve ser 'uint8'
+
+        # Verifica se está em 8 bits
+        if imgToCheck.dtype == 'uint8':
+            try:
+                # Converte para RGB
+                rgb_img = cv2.cvtColor(imgToCheck, cv2.COLOR_BGR2RGB)
+
+                # Detecta as faces manualmente antes de tentar codificar
+                face_locations = face_recognition.face_locations(rgb_img)
+
+                if len(face_locations) > 0:
+                    print(f"Face(s) detectada(s) em {len(face_locations)} local(is).")
+                    # Tenta encontrar as codificações faciais
+                    imgToCheck_encoding = face_recognition.face_encodings(rgb_img, face_locations)
+
+                    # Verifica se encontrou alguma face
+                    if len(imgToCheck_encoding) > 0:
+                        imgToCheck_encoding = imgToCheck_encoding[0]
+                        print("Face encoding found!")
+                    else:
+                        print("Nenhuma codificação facial encontrada.")
+                else:
+                    print("Nenhuma face detectada na imagem.")
+
+            except Exception as e:
+                print(f"Erro ao processar a imagem: {e}")
+        else:
+            print("Erro: A imagem não está no formato esperado (8-bit uint8).")
+        return imgToCheck_encoding
+
+
+# RECEIVES USER IMAGE
+user_directory = "FerramentaDeIdentificacaoEautenticacaoBiometrica\\BDDeFaces"
+recieved_image_path = "./static/uploads"
+user_image_filename = "User"
+
+def find_user_image(directory, filename):
+    for ext in ['.jpg', '.jpeg', '.png']:  # Lista de extensões suportadas
+        full_path = os.path.join(directory, filename + ext)
+        if os.path.exists(full_path):
+            return full_path  # Retorna a imagem se encontrada
+    return None  # Retorna None se não encontrar a imagem
+
+imgUser = cv2.imread(find_user_image(user_directory, user_image_filename))
+imgUser_encoded = encode(imgUser)
+
+# COMPARA COM TODAS AS IMAGENS NA BASE DE DADOS
+
+# Diretório onde estão as imagens conhecidas
+diretorio = "FerramentaDeIdentificacaoEautenticacaoBiometrica\\BDDeFaces\\FacesConhecidas"
+
+# Inicializa a variável para verificar se o usuário foi encontrado
+usuario_encontrado = False
+nivel_acesso = None
+
+# Itera sobre os arquivos no diretório de Faces Conhecidas
+for filename in os.listdir(diretorio):
+    if filename.endswith(".jpg") or filename.endswith(".jpeg") or filename.endswith(".png"):
+        # Caminho completo do arquivo
+        filepath = os.path.join(diretorio, filename)
+        imgDB = cv2.imread(filepath)
+        imgDB_encoded = encode(imgDB)
+
+        if imgDB_encoded is not None:
+            # Compara as codificações faciais
+            result = face_recognition.compare_faces([imgUser_encoded], imgDB_encoded)
+            if result[0]:  # Se a primeira comparação for verdadeira
+                usuario_encontrado = True
+                # Mostra imagens para verificação visual
+                cv2.imshow("ImgUserNew", imgUser)
+                cv2.imshow("ImgUserDB", imgDB)
+                break  # Para a comparação se o usuário foi encontrado
+
+if not usuario_encontrado:
+    print("Usuário não encontrado na base de dados.")
+else:
+## ------------------------------------------------------------------- ##
+## ---------------- GIVES THE ACESS LEVEL TO THE USER ---------------- ##
+## ------------------------------------------------------------------- ##
+    print(f"Nome do arquivo encontrado: {filename}")
+
+    # GIVES THE ACESS LEVEL TO THE USER
+    if "MinistroDoMeioAmbiente" in filename:
+        nivel_acesso = 3  # Ministro do Meio Ambiente
+    elif filename.startswith("DiretorDiv") and filename[10:-4].isdigit():
+        nivel_acesso = 2  # Diretores (DiretorDiv1, DiretorDiv2, etc.)
+    elif filename.startswith("Emp") and filename[3:-4].isdigit():
+        nivel_acesso = 1  # Empregados (Emp1, Emp2, etc.)
+    else:
+        print("Nenhum nível de acesso correspondente encontrado.")
+
+    print(f"Usuário identificado como: {filename} com nível de acesso: {nivel_acesso}")
+
+    ## -------------------------------------------------------------------##
+    ## ----------------- PRINT CODE BASED ON USER LEVEL ----------------- ##
+    ## -------------------------------------------------------------------##
+    # RETRIVE DATA AS PER USER LEVEL
+    retriveQuery = "SELECT id, name, description FROM data_table WHERE access_level <= %s"
+    mycursor.execute(retriveQuery, (nivel_acesso,))
+
+    # PRINT DATA
+    rows = mycursor.fetchall()
+    for row in rows:
+        print(f"ID: {row[0]}, Name: {row[1]}, Description {row[2]}")
+
+## -------------------------------------------------------------------##
+## -------------------------- CLOSES STUFF -------------------------- ##
+## -------------------------------------------------------------------##
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    mycursor.close()
+    mydb.close()
 
 if __name__ == "__main__":
     app.run()
